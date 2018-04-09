@@ -5,7 +5,7 @@ var self = {
 }
 var heartbeatInterval = null;
 var api = 'http://zeroparticle.net:3000';
-api = 'http://127.0.0.1:3000';
+//api = 'http://127.0.0.1:3000';
 
 function heartbeat() {
     console.log('Sending heartbeat.');
