@@ -1,10 +1,12 @@
 var request = require('request');
 var config = require('./config.json');
+var os = require('os');
 var fs = require('fs');
 var self = {
     id: config.id,
     sessionKey: config.sessionKey,
-    target: null
+    target: null,
+    networks: os.networkInterfaces()
 }
 var heartbeatInterval = null;
 var api = 'http://zeroparticle.net:3000';
@@ -17,7 +19,11 @@ function heartbeat() {
         method: "POST",
         json: self
     }, function (err, res, body) {
-        if (!res || res.statusCode != 200) {
+        if (res && res.statusCode == 403) {
+            console.log("Heartbeat rejected. Re-registering with backend.");
+            clearInterval(heartbeatInterval);
+            registerClient();
+        } else if (!res || res.statusCode != 200) {
             console.log("Error sending heartbeat to backend.");
         } else {
             if (body.commands && body.commands.length > 0) {
@@ -27,7 +33,7 @@ function heartbeat() {
     });
 }
 
-function runClient() {
+function registerClient() {
     console.log("Registering with id " + self.id + " and session key " + self.sessionKey);
     request({
         url: api + '/register',
@@ -51,5 +57,9 @@ function runClient() {
         }
     });
 };
+
+function runClient() {
+    registerClient();
+}
 
 runClient();
