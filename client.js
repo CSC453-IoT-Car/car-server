@@ -26,8 +26,8 @@ function heartbeat() {
         } else if (!res || res.statusCode != 200) {
             console.log("Error sending heartbeat to backend.");
         } else {
-            if (body.commands && body.commands.length > 0) {
-                console.log("Received commands " + body.commands);
+            if (body.targetId) {
+                self.target = body.targetId;
             }
         }
     });
