@@ -6,6 +6,7 @@ var self = {
     id: config.id,
     sessionKey: config.sessionKey,
     target: null,
+    status: 'idle',
     networks: os.networkInterfaces()
 }
 var heartbeatInterval = null;
@@ -26,8 +27,13 @@ function heartbeat() {
         } else if (!res || res.statusCode != 200) {
             console.log("Error sending heartbeat to backend.");
         } else {
-            if (body.targetId) {
-                self.target = body.targetId;
+            if (body) {
+                if (body.targetId) {
+                    self.target = body.targetId;
+                }
+                if (body.blocking) {
+                    console.log('Got command to resolve blockage with: ' + body.blocking);
+                }
             }
         }
     });
