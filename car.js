@@ -10,50 +10,70 @@ var b1='P9_24';
 var b2='P9_26';
 var oe='P9_30';
 
+b.pinMode(a1, b.OUTPUT);
+b.pinMode(a2, b.OUTPUT);
+b.pinMode(b1, b.OUTPUT);
+b.pinMode(b2, b.OUTPUT);
+b.pinMode(oe, b.OUTPUT);
 
-  function forward(b, a1, a2, b1, b2, pa, pb){
-    b.digitalWrite(a1, b.HIGH);
-    b.digitalWrite(a2, b.LOW);
-    b.analogWrite(pa, 1);
+
+/**
+ * Car Signal to Motors
+ */
+b.analogWrite(pa, 0); 
+
+b.analogWrite(pb, 0);
+
+b.digitalWrite(oe, b.HIGH);
+b.digitalWrite(a1, b.HIGH);
+b.digitalWrite(a2, b.HIGH);
+b.digitalWrite(b1, b.HIGH);
+b.digitalWrite(b2, b.HIGH);
+
+function forward(b, a1, a2, b1, b2, pa, pb){
+  b.digitalWrite(a1, b.HIGH);
+  b.digitalWrite(a2, b.LOW);
+  b.analogWrite(pa, 1);
+  
+  b.digitalWrite(b1, b.HIGH);
+  b.digitalWrite(b2, b.LOW);
+  b.analogWrite(pb, 1);
+}
+  
+function reverse(b, a1, a2, b1, b2, pa, pb) {
+  b.digitalWrite(a1, b.LOW);
+  b.digitalWrite(a2, b.HIGH);
+  b.analogWrite(pa, 1);
     
-    b.digitalWrite(b1, b.HIGH);
-    b.digitalWrite(b2, b.LOW);
-    b.analogWrite(pb, 1);
-  }
+  b.digitalWrite(b1, b.LOW);
+  b.digitalWrite(b2, b.HIGH);
+  b.analogWrite(pb, 1);
+}
   
-  function reverse(b, a1, a2, b1, b2, pa, pb) {
-    b.digitalWrite(a1, b.LOW);
-    b.digitalWrite(a2, b.HIGH);
-    b.analogWrite(pa, 1);
-    
-    b.digitalWrite(b1, b.LOW);
-    b.digitalWrite(b2, b.HIGH);
-    b.analogWrite(pb, 1);
-  }
+function stop(b, a1, a2, b1, b2, pa, pb) {
+  b.digitalWrite(a1, b.LOW);
+  b.digitalWrite(a2, b.HIGH);
+  b.analogWrite(pa, 0);
   
-  function stop(b, a1, a2, b1, b2, pa, pb) {
-    b.digitalWrite(a1, b.LOW);
-    b.digitalWrite(a2, b.HIGH);
-    b.analogWrite(pa, 0);
+  b.digitalWrite(b1, b.LOW);
+  b.digitalWrite(b2, b.HIGH);
+  b.analogWrite(pb, 0);  
+  
+}
+  
+function turnClockwise90(b, a1, a2, b1, b2, pa, pb) {
+  b.digitalWrite(a1, b.HIGH);
+  b.digitalWrite(a2, b.LOW);
+  b.analogWrite(pa, 1);
 
-    b.digitalWrite(b1, b.LOW);
-    b.digitalWrite(b2, b.HIGH);
-    b.analogWrite(pb, 0);
-  }
-  
-  function turnClockwise90(b, a1, a2, b1, b2, pa, pb) {
-    b.digitalWrite(a1, b.HIGH);
-    b.digitalWrite(a2, b.LOW);
-    b.analogWrite(pa, 1);
-
-    b.digitalWrite(b1, b.LOW);
-    b.digitalWrite(b2, b.HIGH);
-    b.analogWrite(pb, 0);
-    setTimeout ( function() {
-      stop(b, a1, a2, b1, b2, pa, pb);
-    }, 525);
-  }
+  b.digitalWrite(b1, b.LOW);
+  b.digitalWrite(b2, b.HIGH);
+  b.analogWrite(pb, 0);
+  setTimeout ( function() {
+    stop(b, a1, a2, b1, b2, pa, pb);
+  }, 525);
+}
 
 forward(b, a1, a2, b1, b2, pa, pb);
-//setTimeout(function (){stop(b, a1, a2, b1, b2, pa, pb)}, 500);
+setTimeout(function (){stop(b, a1, a2, b1, b2, pa, pb)}, 500);
 //turnClockwise90(b, a1, a2, b1, b2, pa, pb);
