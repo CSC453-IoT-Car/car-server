@@ -7,6 +7,7 @@ var self = {
     sessionKey: config.sessionKey,
     target: null,
     status: 'idle',
+    type: 'car',
     networks: os.networkInterfaces()
 }
 var heartbeatInterval = null;
