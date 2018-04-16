@@ -1,5 +1,6 @@
 var b = require('bonescript');
 
+<<<<<<< HEAD
 module.exports = {
   /**
     * Needs to be called before any of the other functions are run
@@ -10,7 +11,6 @@ module.exports = {
     b.pinMode(b1, b.OUTPUT);
     b.pinMode(b2, b.OUTPUT);
     b.pinMode(oe, b.OUTPUT);
-
 
     b.analogWrite(pa, 0); 
 
@@ -56,10 +56,10 @@ module.exports = {
   
   pivot: function(a1, a2, b1, b2, pa, pb, det) {
     if (det[1] != 0) {
-      stop(b, a1, a2, b1, b2, pa, pb);
+      stop(a1, a2, b1, b2, pa, pb);
     } 
     if (det[0] == 0) {
-      forward(b, a1, a2, b1, b2, pa, pb);
+      forward(a1, a2, b1, b2, pa, pb);
     } else if (det[0] == 1) {
       b.digitalWrite(a1, b.HIGH);
       b.digitalWrite(a2, b.LOW);
@@ -69,7 +69,7 @@ module.exports = {
       b.digitalWrite(b2, b.HIGH);
       b.analogWrite(pb, .5);
       setTimeout(function() {
-        stop(b, a1, a2, b1, b2, pa, pb);
+        stop(a1, a2, b1, b2, pa, pb);
       }, 250);
     } else if (det[0] == 2){
       b.digitalWrite(a1, b.HIGH);
@@ -80,7 +80,7 @@ module.exports = {
       b.digitalWrite(b2, b.HIGH);
       b.analogWrite(pb, .5);
       setTimeout(function() {
-        stop(b, a1, a2, b1, b2, pa, pb);
+        stop(a1, a2, b1, b2, pa, pb);
       }, 400);
     } else if (det[0] == 3){
       b.digitalWrite(a1, b.HIGH);
@@ -91,7 +91,7 @@ module.exports = {
       b.digitalWrite(b2, b.HIGH);
       b.analogWrite(pb, .5);
       setTimeout(function() {
-        stop(b, a1, a2, b1, b2, pa, pb);
+        stop(a1, a2, b1, b2, pa, pb);
       }, 500);
     } else if (det[0] == 4){
       b.digitalWrite(a1, b.HIGH);
@@ -102,7 +102,7 @@ module.exports = {
       b.digitalWrite(b2, b.HIGH);
       b.analogWrite(pb, .5);
       setTimeout(function() {
-        stop(b, a1, a2, b1, b2, pa, pb);
+        stop(a1, a2, b1, b2, pa, pb);
       }, 625);
     } else if (det[0] == -1){
       b.digitalWrite(a1, b.LOW);
@@ -113,7 +113,7 @@ module.exports = {
       b.digitalWrite(b2, b.LOW);
       b.analogWrite(pb, 1);
       setTimeout(function() {
-        stop(b, a1, a2, b1, b2, pa, pb);
+        stop(a1, a2, b1, b2, pa, pb);
       }, 250);
     } else if (det[0] == -2){
       b.digitalWrite(a1, b.LOW);
@@ -124,7 +124,7 @@ module.exports = {
       b.digitalWrite(b2, b.LOW);
       b.analogWrite(pb, 1);
       setTimeout(function() {
-        stop(b, a1, a2, b1, b2, pa, pb);
+        stop(a1, a2, b1, b2, pa, pb);
       }, 400);
     } else if (det[0] == -3){
       b.digitalWrite(a1, b.LOW);
@@ -135,10 +135,10 @@ module.exports = {
       b.digitalWrite(b2, b.LOW);
       b.analogWrite(pb, 1);
       setTimeout(function() {
-        stop(b, a1, a2, b1, b2, pa, pb);
+        stop(a1, a2, b1, b2, pa, pb);
       }, 625);
     }
-  
+
   }
 
 }
