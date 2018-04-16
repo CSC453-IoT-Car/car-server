@@ -1,0 +1,11 @@
+/**
+* pinouts for motors and power
+*/
+
+var pa='P9_21';
+var pb='P9_22';
+var a1='P9_23';
+var a2='P9_17';
+var b1='P9_24';
+var b2='P9_26';
+var oe='P9_41';//used to be P9_30
