@@ -1,6 +1,5 @@
 var b = require('bonescript');
 
-<<<<<<< HEAD
 module.exports = {
   /**
     * Needs to be called before any of the other functions are run
