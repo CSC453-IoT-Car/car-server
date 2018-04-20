@@ -1,8 +1,8 @@
 var b = require("bonescript");
 
 outpin = "P8_17"
-//inpin = "P8_19"
-//600 Milliseconds
+inpin = "P8_19"
+
 /**
  * Conversion of Thomas' code
 b.pinMode(outpin, b.OUTPUT);
