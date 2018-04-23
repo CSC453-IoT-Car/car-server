@@ -1,7 +1,7 @@
 var b = require('bonescript');
 
-var trigger = 'P9_16',
-	echo 	= 'P9_41',
+var trigger = 'P8_17', //outpin
+	echo 	= 'P8_19', //inpin
 	ms 	= 250;
 
 var startTime, pulseTime;
