@@ -11,6 +11,7 @@ module.exports = {
     b.pinMode(b2, b.OUTPUT);
     b.pinMode(oe, b.OUTPUT);
 
+
     b.analogWrite(pa, 0); 
 
     b.analogWrite(pb, 0);
@@ -43,16 +44,23 @@ module.exports = {
   }
   
   stop: function(a1, a2, b1, b2, pa, pb) {
-    b.digitalWrite(a1, b.LOW);
-    b.digitalWrite(a2, b.HIGH);
     b.analogWrite(pa, 0);
   
-    b.digitalWrite(b1, b.LOW);
-    b.digitalWrite(b2, b.HIGH);
-    b.analogWrite(pb, 0);  
-  
+    b.analogWrite(pb, 0);
   }
-  
+  /**
+   * Accepts the following inputs to determine direction from detector.js getDirection function
+   * 
+   * If the status is 0, then no special case occured, and the direction is centered such
+   * that 0 is forward, < 0 is more left, >0 is more right.
+   *              FRONT
+   *                0
+   *             -1   1
+   *  LEFT    -2   CAR  2      RIGHT
+   *             -3   3
+   *                4
+   *              BACK
+   * */
   pivot: function(a1, a2, b1, b2, pa, pb, det) {
     if (det[1] != 0) {
       stop(a1, a2, b1, b2, pa, pb);
@@ -137,7 +145,62 @@ module.exports = {
         stop(a1, a2, b1, b2, pa, pb);
       }, 625);
     }
+  
+  }
+  
+  /**
+   * Avoid objects without consulting the backend.
+   **/
+  objectAvoidance = function(a1, a2, b1, b2, pa, pb, trigger, echo){
+    //from ultrasonicMovement.js
+    var ms = 250;
+    var startTime, pulseTime;
 
+    b.pinMode(echo, b.INPUT, 7, 'pulldown', 'fast', doAttach);
+    function doAttach(x) {
+	    if (x.err) {
+		    console.log('x.err =', x.err);
+		    return;
+	    }
+	    b.attachInterrupt(echo, true, b.FALLING, interruptCallback);
+    }
+    
+    b.pinMode(trigger, b.OUTPUT);
+    b.digitalWrite(trigger, 1);
+
+    var interval = setInterval(ping, ms);
+    var distance = 0;
+
+    function ping() {
+	    b.digitalWrite(trigger, 0);
+	    startTime = process.hrtime();
+    }
+
+    function interruptCallback(x) {
+	    if (x.attached) {
+		    return;
+	    }
+	    if (startTime) {
+		    pulseTime = process.hrtime(startTime);
+		    b.digitalWrite(trigger, 1);
+		    distance = (pulseTime[1] / 1000000 - 0.8).toFixed(3)
+		    console.log('distance', distance);
+		    if (distance > 1.5) {
+		      forward(a1, a2, b1, b2, pa, pb);
+		    } else {
+          console.log('stopped!');
+          //added to avoid objects and try again.
+          stop(a1, a2, b1, b2, pa, pb);
+          var det = [2,1];
+          pivot(a1, a2, b1, b2, pa, pb, det);
+          forward(a1, a2, b1, b2, pa, pb);
+          det = [-2,1];
+          pivot(a1, a2, b1, b2, pa, pb, det);
+          objectAvoidance(a1, a2, b1, b2, pa, pb, trigger, echo);
+		    }
+	    }
+    }
   }
 
 }
+
