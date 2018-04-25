@@ -1,5 +1,7 @@
 var b = require('bonescript');
 
+var car = require('./car.js');
+
 var pa = 'P9_21';
 var pb='P9_22';
 var a1='P9_23';
@@ -44,6 +46,10 @@ function doAttach(x) {
 b.pinMode(trigger, b.OUTPUT);
 b.digitalWrite(trigger, 1);
 
+var prevDist = 0;
+
+var start = true;
+
 var interval = setInterval(ping, ms);
 var distance = 0;
 
@@ -61,37 +67,24 @@ function interruptCallback(x) {
 		b.digitalWrite(trigger, 1);
 		distance = (pulseTime[1] / 1000000 - 0.8).toFixed(3)
 		console.log('distance', distance);
-		if (distance > 1.5) {
-		    /**
-             * Forward A
-             */
-            b.digitalWrite(a1, b.HIGH);
-            b.digitalWrite(a2, b.LOW);
-            b.analogWrite(pa, 1);
+		if (distance > 3.25 && (Math.abs(prevDist - distance) <= 1 || start)) {
+            car.forward(a1, a2, b1, b2, pa, pb);
+            prevDist = distance;
+			start = false;
+		} else if (prevDist - distance >= 0) {
+            car.stop(a1, a2, b1, b2, pa, pb);
             
+            //var det = [2,1];
+        	
+        	//car.pivot(a1, a2, b1, b2, pa, pb, det);
+        	
+        	//car.forward(a1, a2, b1, b2, pa, pb);
+        	
+        	//det = [-2,1];
+        	
+        	//car.pivot(a1, a2, b1, b2, pa, pb, det);
             
-            /**
-             * Forward B
-             */
-            b.digitalWrite(b1, b.HIGH);
-            b.digitalWrite(b2, b.LOW);
-            b.analogWrite(pb, 1);
-		} else {
-            console.log('stopped!');
-            clearInterval(interval);
-            /**
-             * Reverse A
-             */
-            b.digitalWrite(a1, b.LOW);
-            b.digitalWrite(a2, b.HIGH);
-            b.analogWrite(pa, 0);
-            
-            /**
-             * Reverse B
-             */
-            b.digitalWrite(b1, b.LOW);
-            b.digitalWrite(b2, b.HIGH);
-            b.analogWrite(pb, 0);
+            prevDist = distance;
 		}
 	}
 }
