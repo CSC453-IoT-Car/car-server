@@ -21,17 +21,17 @@ module.exports = {
     b.digitalWrite(a2, b.HIGH);
     b.digitalWrite(b1, b.HIGH);
     b.digitalWrite(b2, b.HIGH);
-  }
+  },
 
   forward: function(a1, a2, b1, b2, pa, pb){
     b.digitalWrite(a1, b.HIGH);
     b.digitalWrite(a2, b.LOW);
-    b.analogWrite(pa, 1);
+    b.analogWrite(pa, .80);
   
     b.digitalWrite(b1, b.HIGH);
     b.digitalWrite(b2, b.LOW);
-    b.analogWrite(pb, 1);
-  }
+    b.analogWrite(pb, 0.745);
+  },
   
   reverse: function(a1, a2, b1, b2, pa, pb) {
     b.digitalWrite(a1, b.LOW);
@@ -41,13 +41,14 @@ module.exports = {
     b.digitalWrite(b1, b.LOW);
     b.digitalWrite(b2, b.HIGH);
     b.analogWrite(pb, 1);
-  }
+  },
   
   stop: function(a1, a2, b1, b2, pa, pb) {
     b.analogWrite(pa, 0);
   
     b.analogWrite(pb, 0);
-  }
+  },
+  
   /**
    * Accepts the following inputs to determine direction from detector.js getDirection function
    * 
@@ -146,12 +147,13 @@ module.exports = {
       }, 625);
     }
   
-  }
+  },
   
   /**
    * Avoid objects without consulting the backend.
    **/
-  objectAvoidance = function(a1, a2, b1, b2, pa, pb, trigger, echo){
+  objectAvoidance: function(a1, a2, b1, b2, pa, pb, trigger, echo){
+    var car = require('./car.js');
     //from ultrasonicMovement.js
     var ms = 250;
     var startTime, pulseTime;
@@ -167,6 +169,10 @@ module.exports = {
     
     b.pinMode(trigger, b.OUTPUT);
     b.digitalWrite(trigger, 1);
+
+    var prevDist = 0;
+
+    var start = true;
 
     var interval = setInterval(ping, ms);
     var distance = 0;
@@ -185,22 +191,23 @@ module.exports = {
 		    b.digitalWrite(trigger, 1);
 		    distance = (pulseTime[1] / 1000000 - 0.8).toFixed(3)
 		    console.log('distance', distance);
-		    if (distance > 1.5) {
-		      forward(a1, a2, b1, b2, pa, pb);
-		    } else {
-          console.log('stopped!');
+		    if (distance > 3.25 && (Math.abs(prevDist - distance) <= 1 || start)) {
+		      car.forward(a1, a2, b1, b2, pa, pb);
+		      prevDist = distance;
+			    start = false;
+		    } else if (prevDist - distance >= 0){
           //added to avoid objects and try again.
-          stop(a1, a2, b1, b2, pa, pb);
+          prevDist = distance;
+          car.stop(a1, a2, b1, b2, pa, pb);
           var det = [2,1];
-          pivot(a1, a2, b1, b2, pa, pb, det);
-          forward(a1, a2, b1, b2, pa, pb);
+          car.pivot(a1, a2, b1, b2, pa, pb, det);
+          car.forward(a1, a2, b1, b2, pa, pb);
           det = [-2,1];
-          pivot(a1, a2, b1, b2, pa, pb, det);
-          objectAvoidance(a1, a2, b1, b2, pa, pb, trigger, echo);
+          car.pivot(a1, a2, b1, b2, pa, pb, det);
+          car.objectAvoidance(a1, a2, b1, b2, pa, pb, trigger, echo);
 		    }
 	    }
     }
   }
 
 }
-
