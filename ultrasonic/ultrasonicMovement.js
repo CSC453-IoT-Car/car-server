@@ -83,7 +83,7 @@ function interruptCallback(x) {
 				prevDistArray[2] = distance;
 			} else {
 				prevDistArray[arrayIndex] = distance;
-				if (arrayIndex < 2) {
+				if (arrayIndex <= 2) {
 					arrayIndex++;
 				}
 			}
