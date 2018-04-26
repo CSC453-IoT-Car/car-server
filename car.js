@@ -65,9 +65,11 @@ module.exports = {
   pivot: function(a1, a2, b1, b2, pa, pb, det) {
     if (det[1] != 0) {
       stop(a1, a2, b1, b2, pa, pb);
+      return 'idle'
     } 
     if (det[0] == 0) {
       forward(a1, a2, b1, b2, pa, pb);
+      return 'navigating'
     } else if (det[0] == 1) {
       b.digitalWrite(a1, b.HIGH);
       b.digitalWrite(a2, b.LOW);
