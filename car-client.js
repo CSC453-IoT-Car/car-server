@@ -76,6 +76,15 @@ function toolsSetup() {
             pulseTime = process.hrtime(startTime);
             b.digitalWrite(pins.trigger, 1);
             usDistance =  (pulseTime[1] / 1000000 - 0.8).toFixed(3);
+            if (distance > 3.0 && (prevDistArray[2] > 3.0)) {
+                car.forward(a1, a2, b1, b2, pa, pb);
+		    } else if (distance <= 3.0 && (prevDistArray[2] <= 3.0)) {
+                car.stop(a1, a2, b1, b2, pa, pb);
+		    }
+		    prevDistArray[0] = prevDistArray[1];
+		    prevDistArray[1] = prevDistArray[2];
+		    prevDistArray[2] = distance;
+		    console.log("Post Shift: "+prevDistArray);
         }
     }
 
