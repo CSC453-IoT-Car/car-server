@@ -1,2 +1,2 @@
 #!/bin/bash
-screen -dm bash -c "echo temppwd | sudo -S node client.js; exec sh"
+screen -dmS car bash -c "echo temppwd | sudo -S su; ./setup_pru.sh; node client.js; exec sh"
