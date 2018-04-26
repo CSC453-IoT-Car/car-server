@@ -26,11 +26,11 @@ module.exports = {
   forward: function(a1, a2, b1, b2, pa, pb){
     b.digitalWrite(a1, b.HIGH);
     b.digitalWrite(a2, b.LOW);
-    b.analogWrite(pa, .80);
+    b.analogWrite(pa, .40);
   
     b.digitalWrite(b1, b.HIGH);
     b.digitalWrite(b2, b.LOW);
-    b.analogWrite(pb, 0.745);
+    b.analogWrite(pb, 0.35);
   },
   
   reverse: function(a1, a2, b1, b2, pa, pb) {
