@@ -47,9 +47,14 @@ b.pinMode(trigger, b.OUTPUT);
 b.digitalWrite(trigger, 1);
 
 var prevDistArray = new Array(3);
+prevDistArray[0] = 9999;
+prevDistArray[1] = 999;
+prevDistArray[2] = 999;
 var arrayIndex = 0;
 
-var start = true;
+var first = true;
+var second = false;
+var third = false;
 
 var interval = setInterval(ping, ms);
 var distance = 0;
@@ -68,28 +73,12 @@ function interruptCallback(x) {
 		b.digitalWrite(trigger, 1);
 		distance = (pulseTime[1] / 1000000 - 0.8).toFixed(3)
 		console.log('distance', distance);
-		if (start && distance > 3.0){
-			start = true;
-		} else {
-			start = false;
-		}
-		if (distance > 3.0 && (Math.abs(prevDistArray[0] - distance) <= 1 || start)) {
+		if (distance > 3.0 && (prevDistArray[2] > 3.0)) {
             car.forward(a1, a2, b1, b2, pa, pb);
-            
-			start = false;
-			if (arrayIndex > 2) {
-				prevDistArray[0] = prevDistArray[1];
-				prevDistArray[1] = prevDistArray[2];
-				prevDistArray[2] = distance;
-			} else {
-				prevDistArray[arrayIndex] = distance;
-				if (arrayIndex <= 2) {
-					arrayIndex++;
-				}
-			}
 			
-		} else {
+		} else if (distance <= 3.0 && (prevDistArray[2] <= 3.0)) {
             car.stop(a1, a2, b1, b2, pa, pb);
+            //console.log("8");
             
             //var det = [2,1];
         	
@@ -102,6 +91,10 @@ function interruptCallback(x) {
         	//car.pivot(a1, a2, b1, b2, pa, pb, det);
             
 		}
+			prevDistArray[0] = prevDistArray[1];
+			prevDistArray[1] = prevDistArray[2];
+			prevDistArray[2] = distance;
+			console.log("Post Shift: "+prevDistArray);
 	}
 }
 
