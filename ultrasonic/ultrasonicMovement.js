@@ -47,6 +47,7 @@ b.pinMode(trigger, b.OUTPUT);
 b.digitalWrite(trigger, 1);
 
 var prevDist = 0;
+var prevPrevDist = 0;
 
 var start = true;
 
@@ -71,7 +72,7 @@ function interruptCallback(x) {
             car.forward(a1, a2, b1, b2, pa, pb);
             prevDist = distance;
 			start = false;
-		} else if (prevDist - distance >= 0) {
+		} else /**if (prevDist - distance >= 0)*/ {
             car.stop(a1, a2, b1, b2, pa, pb);
             
             //var det = [2,1];
@@ -86,6 +87,7 @@ function interruptCallback(x) {
             
             prevDist = distance;
 		}
+		prevDist = distance;
 	}
 }
 
