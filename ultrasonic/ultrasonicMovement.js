@@ -46,8 +46,8 @@ function doAttach(x) {
 b.pinMode(trigger, b.OUTPUT);
 b.digitalWrite(trigger, 1);
 
-var prevDist = 0;
-var prevPrevDist = 0;
+var prevDistArray = new Array(3);
+var arrayIndex = 0;
 
 var start = true;
 
@@ -68,11 +68,27 @@ function interruptCallback(x) {
 		b.digitalWrite(trigger, 1);
 		distance = (pulseTime[1] / 1000000 - 0.8).toFixed(3)
 		console.log('distance', distance);
-		if (distance > 3.25 && (Math.abs(prevDist - distance) <= 1 || start)) {
-            car.forward(a1, a2, b1, b2, pa, pb);
-            prevDist = distance;
+		if (start && distance > 3.0){
+			start = true;
+		} else {
 			start = false;
-		} else /**if (prevDist - distance >= 0)*/ {
+		}
+		if (distance > 3.0 && (Math.abs(prevDistArray[0] - distance) <= 1 || start)) {
+            car.forward(a1, a2, b1, b2, pa, pb);
+            
+			start = false;
+			if (arrayIndex > 2) {
+				prevDistArray[0] = prevDistArray[1];
+				prevDistArray[1] = prevDistArray[2];
+				prevDistArray[2] = distance;
+			} else {
+				prevDistArray[arrayIndex] = distance;
+				if (arrayIndex < 2) {
+					arrayIndex++;
+				}
+			}
+			
+		} else {
             car.stop(a1, a2, b1, b2, pa, pb);
             
             //var det = [2,1];
@@ -85,9 +101,7 @@ function interruptCallback(x) {
         	
         	//car.pivot(a1, a2, b1, b2, pa, pb, det);
             
-            prevDist = distance;
 		}
-		prevDist = distance;
 	}
 }
 
