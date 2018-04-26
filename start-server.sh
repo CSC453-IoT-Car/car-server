@@ -1,2 +1,2 @@
 #!/bin/bash
-su node client.js
+screen -dm bash -c "echo temppwd | sudo -S node client.js; exec sh"
