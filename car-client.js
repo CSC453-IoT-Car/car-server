@@ -14,9 +14,7 @@ var self = {
     status: 'idle',
     type: 'car',
     networks: os.networkInterfaces(),
-    blocking: null,
-    ultrasonic: null,
-    detector: null
+    blocking: null
 }
 var heartbeatInterval = null;
 var api = 'http://zeroparticle.net:3000';
@@ -25,6 +23,7 @@ var targetSeen = false;
 var currentTarget = '';
 var beaconSeenBefore = false;
 var otherCars = [];
+var pastSuccess = 0;
 
 var pins = {
     "a1" : 'P9_23',
@@ -45,8 +44,6 @@ prevDistArray[0] = 9999;
 prevDistArray[1] = 999;
 prevDistArray[2] = 999;
 
-var beaconSearchTries = 0;
-
 function interruptCallback(x) {
     if (x.attached) {
         return;
@@ -57,7 +54,7 @@ function interruptCallback(x) {
         prevDistArray[0] = prevDistArray[1];
         prevDistArray[1] = prevDistArray[2];
         prevDistArray[2] = (pulseTime[1] / 1000000 - 0.8).toFixed(3);
-        self.ultrasonic = prevDistArray[2];
+        console.log('prevDistArray', prevDistArray)
     }
 }
     
@@ -128,7 +125,6 @@ function avoidance(x) {
 }
 
 function beforeMovement(targetId) {
-    console.log("At before")
     var promise = new Promise(function(resolve, reject) {
         resolve(detector.getLastReading(targetId))
     })
@@ -136,26 +132,30 @@ function beforeMovement(targetId) {
         return detector.getDirection(value);
     }).then(function(value) {
         var dir = value;
-        self.detector = dir;
         console.log(dir);
         if (dir[1] != 0) {
-            if ((dir[1] != -1 || targetSeen) && beaconSearchTries < 3) {
-                beaconSearchTries += 1;
-                self.status = 'navigating'
-                car.forward(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
-                setTimeout(function() {
-                    car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
+            console.log('past four', pastSuccess)
+            if (dir[1] == 1) {
+                if (pastSuccess >= 6) {
                     self.status = 'idle'
-                }, 500);
-                setTimeout(function() {
-                    beforeMovement(targetId);
-                }, 1000);
-                return;
+                    car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
+                    return;
+                }
+                pastSuccess += 1
             } else {
-                throw "Couldn't find target"
+                pastSuccess == 0;
             }
+            self.status = 'navigating'
+            car.forward(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
+            setTimeout(function() {
+                car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
+                beforeMovement(targetId)
+            }, 1000);
+            
+            // throw ('Sensor error ' + dir[1])
+            // return;
         } else {
-            beaconSearchTries = 0;
+            pastSuccess = 0;
             self.status = 'navigating'
             car.pivot(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb, dir);
             setTimeout(function() {
@@ -164,19 +164,17 @@ function beforeMovement(targetId) {
         }
     }).catch(function(error) {
         console.log(error);
+        self.status = 'idle'
         car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
-        self.status = 'idle';
-        self.target = -1;
     })
 }
 
 
 // Car movements
 function movement(targetId) {
-    console.log("At movement")
     if (prevDistArray[2] <= 3 && prevDistArray[1] <= 3) {
         car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
-        self.status = 'idle'
+        self.status = 'blocked'
         var carBlockage = false;
         for (var otherCarId in otherCars) {
             carBlockage = true;
@@ -198,14 +196,15 @@ function movement(targetId) {
     } else {
         car.forward(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
     }
-    setTimeout(function() {
-        movement(targetId);
-    }, 100);
+    if (self.status == 'navigating') {
+        setTimeout(function() {
+            beforeMovement(targetId);
+        }, 3000);
+    }
 }
 
 function heartbeat() {
-    console.log("At heartbeat")
-    console.log("self", self)
+    console.log('Sending heartbeat.');
     request({
         url: api + '/heartbeat',
         method: "POST",
@@ -219,14 +218,12 @@ function heartbeat() {
             console.log("Error sending heartbeat to backend.");
         } else {
             if (body) {
-                if (self.target == null) self.target = '-1';
-                if (body.targetId && body.targetId != '-1') {
-                    if (self.target != body.targetId) {
-                        self.target = body.targetId;
-                        console.log('At first move');
+                if (body.targetId) {
+                    var old = self.target;
+                    self.target = body.targetId;
+                    if (self.target != old) {
                         beforeMovement(self.target);
                     }
-                    self.target = body.targetId;
                 } else if (body.targetId && body.targetId == '-1') {
                     self.status = 'idle';
                     self.target = body.targetId;
@@ -258,21 +255,14 @@ function registerClient() {
         } else if (!res || res.statusCode != 200) {
             console.log("Error registering with backend." + res);
         } else {
-            console.log("At register")
             registered = true;
+            console.log('registered', registered)
             self.sessionKey = body.sessionKey;
             var updatedConf = {
                 id: self.id,
                 sessionKey: self.sessionKey
             }
             fs.writeFileSync('config.json', JSON.stringify(updatedConf));
-        }
-        console.log('registered', registered);
-        if (registered) {
-            heartbeatInterval = setInterval(heartbeat, 1000);
-        } else {
-            self.target = -1;
-            beforeMovement(self.target);
         }
     });
     
@@ -285,6 +275,7 @@ function getOtherObjects() {
         method: "GET"
     }, function (err, res, body) {
         if (res && res.statusCode == 200) {
+            console.log('other objects: ', body);
             for (var item in body) {
                 if (item.type == "car" && item.id != self.id) {
                     otherCars.push(item.id);
@@ -312,7 +303,6 @@ function runClient() {
     registerClient();
     getOtherObjects();
     toolsSetup();
-    /*moving to register callback
     setTimeout(function() {
         console.log('registered', registered);
         if (registered) {
@@ -322,7 +312,6 @@ function runClient() {
             beforeMovement(self.target);
         }
     }, 1000)
-    */
 }
 
 runClient();
