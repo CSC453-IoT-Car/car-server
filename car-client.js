@@ -79,7 +79,7 @@ function toolsSetup() {
     b.pinMode(pins.trigger, b.OUTPUT);
     b.digitalWrite(pins.trigger, 1);
 
-    // setInterval(ping, ms);
+    setInterval(ping, ms);
 
     function ping() {
         b.digitalWrite(pins.trigger, 0);
@@ -203,7 +203,11 @@ function heartbeat() {
         } else {
             if (body) {
                 if (body.targetId) {
+                    var old = self.target;
                     self.target = body.targetId;
+                    if (self.target != old) {
+                        beforeMovement(self.target);
+                    }
                 } else {
                     self.status = 'idle';
                     car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
@@ -233,13 +237,14 @@ function registerClient() {
         } else if (!res || res.statusCode != 200) {
             console.log("Error registering with backend.");
         } else {
+            registered = true;
+            console.log('registered', registered)
             self.sessionKey = body.sessionKey;
             var updatedConf = {
                 id: self.id,
                 sessionKey: self.sessionKey
             }
             fs.writeFileSync('config.json', JSON.stringify(updatedConf));
-            registered = true;
         }
     });
 };
@@ -279,10 +284,9 @@ function runClient() {
     getOtherObjects();
     toolsSetup();
     setTimeout(function() {
+        console.log('registered', registered);
         if (registered) {
             heartbeatInterval = setInterval(heartbeat, 1000);
-            beforeMovement(self.target)
-            movement(self.target);
         } else {
             self.target = 0;
             beforeMovement(self.target);
