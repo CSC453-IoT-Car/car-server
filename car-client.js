@@ -54,7 +54,7 @@ function interruptCallback(x) {
         prevDistArray[0] = prevDistArray[1];
         prevDistArray[1] = prevDistArray[2];
         prevDistArray[2] = (pulseTime[1] / 1000000 - 0.8).toFixed(3);
-        console.log('prevDistArray', prevDistArray)
+
     }
 }
     
@@ -172,16 +172,42 @@ function beforeMovement(targetId) {
 
 // Car movements
 function movement(targetId) {
+    console.log("Moving");
     if (prevDistArray[2] <= 3 && prevDistArray[1] <= 3) {
         car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
         self.status = 'blocked'
         var carBlockage = false;
+        console.log("other cars: " + otherCars);
+        
+        //console.log("9: "+detector.getRecentDetections(Date.now() - 3000).in(9)) ;
+        var blockingMe = [];
+        for(var i = 0; i < 16; i++){
+            if(i == self.id || i == 0 || i == 4 )continue;
+            //var dir = detector.getDirection(detector.getLastReading(i));
+            //if(dir[0] == 0 || dir[0] == NaN && (dir[1] == 1 || dir[1] == 2 )){
+            if(detector.getRecentDetections(i, Date.now() - 3000).indexOf(0) != -1){
+                blockingMe.push(i);
+            }
+            //}
+        }
+        
+        for(var i = 0; i < blockingMe.length; i++){
+            if (registered) {
+                //console.log("blocking car id: " + otherCarId)
+                notifyBlocked(self.id,blockingMe[i]);
+                carBlockage = true;
+            }
+        }
+        console.log("blocking Me " + blockingMe);
+        /*
         for (var otherCarId in otherCars) {
             carBlockage = true;
             var dir = detector.getDirection(detector.getRecentDetections(otherCarId));
+            console.log("car id: " + otherCarId + " dir: " + dir);
             if (dir[0] == NaN && (dir[1] == 1 || dir[1] == 2)) {
                 self.blocking = true;
                 if (registered) {
+                    //console.log("blocking car id: " + otherCarId)
                     notifyBlocked(self.id, otherCarId);
                 } else {
                     carBlockage = false;
@@ -189,7 +215,12 @@ function movement(targetId) {
                 break;
             }
         }
-        if (!carBlockage) {
+        */
+        if(carBlockage){
+            
+            return;
+        }
+        else {
             b.detachInterrupt(pins.echo, avoidance);
             return;
         }
@@ -198,8 +229,9 @@ function movement(targetId) {
     }
     if (self.status == 'navigating') {
         setTimeout(function() {
-            beforeMovement(targetId);
-        }, 3000);
+            //beforeMovement(targetId);
+            movement(targetId);
+        }, 100);//3000
     }
 }
 
@@ -221,15 +253,22 @@ function heartbeat() {
                 if (body.targetId) {
                     var old = self.target;
                     self.target = body.targetId;
+                    console.log("Target set to "+self.target);
+                    self.status = 'navigating';
+                    movement(self.target); 
+                    /*
                     if (self.target != old) {
-                        beforeMovement(self.target);
+                        movement(self.target); //was beforeMovement
                     }
+                    */
                 } else if (body.targetId && body.targetId == '-1') {
                     self.status = 'idle';
                     self.target = body.targetId;
+                    console.log("Status set to idle in heartbeat");
                     car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
                 }
                 if (body.blocking) {
+                    console.log("Im in the way!");
                     self.status = 'navigating'
                     car.forward(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
                     setTimeout(function() {
@@ -243,7 +282,7 @@ function heartbeat() {
 }
 
 function registerClient() {
-    return success = false;
+    //var success = false;
     console.log("Registering with id " + self.id + " and session key " + self.sessionKey);
     request({
         url: api + '/register',
@@ -263,10 +302,17 @@ function registerClient() {
                 sessionKey: self.sessionKey
             }
             fs.writeFileSync('config.json', JSON.stringify(updatedConf));
+            console.log('registered', registered);
+            if (registered) {
+                heartbeatInterval = setInterval(heartbeat, 1000);
+            } else {
+                self.target = 0;
+                movement(self.target); //was beforeMovement, need to not do this to prevent movement befor etarget set
+            }
         }
     });
     
-    return success;
+    //return success;
 };
 
 function getOtherObjects() {
@@ -286,16 +332,49 @@ function getOtherObjects() {
 }
 
 function notifyBlocked(id, blockindId) {
+    console.log("Notifying server about "+blockindId);
     var body = {
         id : id,
-        blockindId : blockindId
+        blockedById : blockindId
     };
     request({
         url: api + "/notify/blocked",
         method: "POST",
         json: body
     }, function (err, res, body) {
-
+        console.log("Notified server");
+        if (res && res.statusCode == 200) {
+            if(body.action == "wait" || body.action == 'resolve-remote'){
+                //wait 10 sec before checking again/going around
+                console.log("Waiting 10 seconds for remote resolve");
+                setTimeout(function(){
+                    if (prevDistArray[2] <= 3 && prevDistArray[1] <= 3) {
+                        //failed to resolve, go around
+                        console.log("going around");
+                        b.detachInterrupt(pins.echo, avoidance);
+                    } else{
+                        movement(self.target);
+                    }
+                }, 10000);
+            } else if(body.action == "resolve-local"){
+                console.log("Going around now");
+                //go around now
+                b.detachInterrupt(pins.echo, avoidance);
+                // avoidance();
+            }
+        } else{
+            //wait 10 sec
+            console.log("Error, waiting 10 seconds before going around")
+            setTimeout(function(){
+                if (prevDistArray[2] <= 3 && prevDistArray[1] <= 3) {
+                    //failed to resolve, go around
+                    console.log("Going around");
+                    b.detachInterrupt(pins.echo, avoidance);
+                } else{
+                    movement(target);
+                }
+            }, 10000);
+        }
     })
 }
 
@@ -303,15 +382,15 @@ function runClient() {
     registerClient();
     getOtherObjects();
     toolsSetup();
-    setTimeout(function() {
-        console.log('registered', registered);
-        if (registered) {
-            heartbeatInterval = setInterval(heartbeat, 1000);
-        } else {
-            self.target = 0;
-            beforeMovement(self.target);
-        }
-    }, 1000)
+    // setTimeout(function() {
+    //     console.log('registered', registered);
+    //     if (registered) {
+    //         heartbeatInterval = setInterval(heartbeat, 1000);
+    //     } else {
+    //         self.target = 0;
+    //         beforeMovement(self.target);
+    //     }
+    // }, 1000)
 }
 
 runClient();
