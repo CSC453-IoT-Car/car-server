@@ -133,15 +133,22 @@ function beforeMovement(targetId) {
         var dir = value;
         console.log(dir);
         if (dir[1] != 0) {
-            var error = dir[1]
-            if (error == -1) console.log("Sensor error. Sensors have no date about this target");
-            if (error == 1) console.log("Sensor error. All 4 sensors are picking up the target signal, indeterminate direction");
-            if (error == 2) console.log("Sensor error. Front and Back sensors are picking up the target signal, likely ahead or behind");
-            if (error == 3) console.log("Sensor error. Left and Right are picking up the target, likely directly to one of the sides");
-            if (error == 4) console.log("Sensor error. Unknown condition.")
-            throw ('Sensor error ' + dir[1])
-            return;
+            if (dir[1] != -1 || targetSeen) {
+                self.status = 'navigating'
+                car.forward(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
+                setTimeout(function() {
+                    car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
+                    self.status = 'idle'
+                }, 500);
+                setTimeout(function() {
+                    beforeMovement(targetId);
+                }, 1000);
+                return;
+            } else {
+                throw "Couldn't find target"
+            }
         } else {
+            self.status = 'navigating'
             car.pivot(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb, dir);
             setTimeout(function() {
                 movement(targetId);
@@ -151,6 +158,7 @@ function beforeMovement(targetId) {
         console.log(error);
         car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
         self.status = 'idle'
+        self.target = -1;
     })
 }
 
@@ -179,7 +187,6 @@ function movement(targetId) {
             return;
         }
     } else {
-        // car.pivot(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb, dir);
         car.forward(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
     }
     setTimeout(function() {
@@ -202,12 +209,14 @@ function heartbeat() {
             console.log("Error sending heartbeat to backend.");
         } else {
             if (body) {
-                if (body.targetId) {
-                    var old = self.target;
-                    self.target = body.targetId;
-                    if (self.target != old) {
+                if (self.target == null) self.target = '-1';
+                if (body.targetId && body.targetId != '-1') {
+                    if (self.target != body.targetId) {
+                        self.target = body.targetId;
+                        console.log('first move');
                         beforeMovement(self.target);
                     }
+                    self.target = body.targetId;
                 } else {
                     self.status = 'idle';
                     car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
@@ -238,7 +247,6 @@ function registerClient() {
             console.log("Error registering with backend.");
         } else {
             registered = true;
-            console.log('registered', registered)
             self.sessionKey = body.sessionKey;
             var updatedConf = {
                 id: self.id,
@@ -255,7 +263,6 @@ function getOtherObjects() {
         method: "GET"
     }, function (err, res, body) {
         if (res && res.statusCode == 200) {
-            console.log('other objects: ', body);
             for (var item in body) {
                 if (item.type == "car" && item.id != self.id) {
                     otherCars.push(item.id);
