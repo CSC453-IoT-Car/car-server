@@ -43,10 +43,24 @@ prevDistArray[0] = 9999;
 prevDistArray[1] = 999;
 prevDistArray[2] = 999;
 
+function interruptCallback(x) {
+    if (x.attached) {
+        return;
+    }
+    if (startTime) {
+        pulseTime = process.hrtime(startTime);
+        b.digitalWrite(pins.trigger, 1);
+        prevDistArray[0] = prevDistArray[1];
+        prevDistArray[1] = prevDistArray[2];
+        prevDistArray[2] = (pulseTime[1] / 1000000 - 0.8).toFixed(3);
+        console.log('prevDistArray', prevDistArray)
+    }
+}
+    
 function toolsSetup() {
     //Car
     car.setPinouts(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb, pins.oe);
-
+    car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
     //Detector
     detector.enable();
 
@@ -70,20 +84,7 @@ function toolsSetup() {
     function ping() {
         b.digitalWrite(pins.trigger, 0);
         startTime = process.hrtime();
-    }
-
-    function interruptCallback(x) {
-        if (x.attached) {
-            return;
-        }
-        if (startTime) {
-            pulseTime = process.hrtime(startTime);
-            b.digitalWrite(pins.trigger, 1);
-            prevDistArray[0] = prevDistArray[1];
-            prevDistArray[1] = prevDistArray[2];
-            prevDistArray[2] = (pulseTime[1] / 1000000 - 0.8).toFixed(3);
-        }
-    }	    
+    }  
 }
 //added from ultrasonicMovement.js
 function avoidance(x) {
@@ -111,8 +112,9 @@ function avoidance(x) {
                                 prevDistArray[0] = 9999;
                                 prevDistArray[1] = 999;
                                 prevDistArray[2] = 999;
-                                b.attachInterrupt(echo, true, b.FALLING, interruptCallback);
-                                b.digitalWrite(trigger, 1);
+                                b.attachInterrupt(pins.echo, true, b.FALLING, interruptCallback);
+                                b.digitalWrite(pins.trigger, 1);
+                                movement(self.target);
                             }, 1000);
                     }, 1000);
                 }, 2000);
@@ -122,17 +124,18 @@ function avoidance(x) {
 }
 // Car movements
 function movement(targetId) {
-    var sensors = detector.getRecentDetections(targetId);
-    var dir = detector.getDirection(sensors);
-    if (dir[1] != 0) {
-        var error = dir[1]
-        if (error == -1) console.log("Sensor error. Sensors have no date about this target");
-        if (error == 1) console.log("Sensor error. All 4 sensors are picking up the target signal, indeterminate directoin");
-        if (error == 2) console.log("Sensor error. Front and Back sensors are picking up the target signal, likely ahead or behind");
-        if (error == 3) console.log("Sensor error. Left and Right are picking up the target, likely directly to one of the sides");
-        if (error == 4) console.log("Sensor error. Unknown condition.")
-        self.status = 'idle'
-    }
+    // var sensors = detector.getRecentDetections(targetId);
+    // var dir = detector.getDirection(sensors);
+    // if (dir[1] != 0) {
+    //     // var error = dir[1]
+    //     // if (error == -1) console.log("Sensor error. Sensors have no date about this target");
+    //     // if (error == 1) console.log("Sensor error. All 4 sensors are picking up the target signal, indeterminate directoin");
+    //     // if (error == 2) console.log("Sensor error. Front and Back sensors are picking up the target signal, likely ahead or behind");
+    //     // if (error == 3) console.log("Sensor error. Left and Right are picking up the target, likely directly to one of the sides");
+    //     // if (error == 4) console.log("Sensor error. Unknown condition.")
+    //     car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
+    //     self.status = 'idle'
+    // }
     if (prevDistArray[2] <= 3 && prevDistArray[1] <= 3) {
         car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
         self.status = 'idle'
@@ -150,13 +153,16 @@ function movement(targetId) {
             }
         }
         if (!carBlockage) {
-            b.detachInterrupt(echo, avoidance);
+            b.detachInterrupt(pins.echo, avoidance);
+            return;
         }
     } else {
-        car.pivot(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb, dir);
+        // car.pivot(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb, dir);
         car.forward(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
     }
-    movement(targetId);
+    setTimeout(function() {
+        movement(targetId);
+    }, 100);
 }
 
 function heartbeat() {
@@ -255,7 +261,8 @@ function runClient() {
             heartbeatInterval = setInterval(heartbeat, 1000);
             movement(self.target);
         } else {
-            movement(0);
+            self.target = 0;
+            movement(self.target);
         }
     }, 1000)
 }
