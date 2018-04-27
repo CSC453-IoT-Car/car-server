@@ -54,7 +54,7 @@ function interruptCallback(x) {
         prevDistArray[0] = prevDistArray[1];
         prevDistArray[1] = prevDistArray[2];
         prevDistArray[2] = (pulseTime[1] / 1000000 - 0.8).toFixed(3);
-
+        console.log("Previous Dist Array: " + prevDistArray)
     }
 }
     
@@ -110,12 +110,14 @@ function avoidance(x) {
                     setTimeout(function(){
                         car.pivot(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb, det2);
                             setTimeout(function(){
+                                console.log("Done avoiding");
                                 prevDistArray[0] = 9999;
                                 prevDistArray[1] = 999;
                                 prevDistArray[2] = 999;
                                 b.attachInterrupt(pins.echo, true, b.FALLING, interruptCallback);
                                 b.digitalWrite(pins.trigger, 1);
-                                beforeMovement(self.target);
+                                // beforeMovement(self.target);
+                                movement(self.target);
                             }, 1000);
                     }, 1000);
                 }, 2000);
@@ -353,12 +355,17 @@ function notifyBlocked(id, blockindId) {
                         console.log("going around");
                         b.detachInterrupt(pins.echo, avoidance);
                     } else{
+                        console.log("remote resolve done")
+                        self.status = 'navigating'
+                        b.attachInterrupt(pins.echo, true, b.FALLING, interruptCallback);
+                        b.digitalWrite(pins.trigger, 1);
                         movement(self.target);
                     }
                 }, 10000);
             } else if(body.action == "resolve-local"){
                 console.log("Going around now");
                 //go around now
+                self.status = 'navigating'
                 b.detachInterrupt(pins.echo, avoidance);
                 // avoidance();
             }
@@ -369,6 +376,7 @@ function notifyBlocked(id, blockindId) {
                 if (prevDistArray[2] <= 3 && prevDistArray[1] <= 3) {
                     //failed to resolve, go around
                     console.log("Going around");
+                    self.status = 'navigating'
                     b.detachInterrupt(pins.echo, avoidance);
                 } else{
                     movement(target);
