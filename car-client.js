@@ -79,7 +79,7 @@ function toolsSetup() {
     b.pinMode(pins.trigger, b.OUTPUT);
     b.digitalWrite(pins.trigger, 1);
 
-    setInterval(ping, ms);
+    // setInterval(ping, ms);
 
     function ping() {
         b.digitalWrite(pins.trigger, 0);
@@ -114,7 +114,7 @@ function avoidance(x) {
                                 prevDistArray[2] = 999;
                                 b.attachInterrupt(pins.echo, true, b.FALLING, interruptCallback);
                                 b.digitalWrite(pins.trigger, 1);
-                                movement(self.target);
+                                beforeMovement(self.target);
                             }, 1000);
                     }, 1000);
                 }, 2000);
@@ -122,20 +122,41 @@ function avoidance(x) {
         }	, 2000);
     }, 500);
 }
+
+function beforeMovement(targetId) {
+    var promise = new Promise(function(resolve, reject) {
+        resolve(detector.getLastReading(targetId))
+    })
+    promise.then(function(value) {
+        return detector.getDirection(value);
+    }).then(function(value) {
+        var dir = value;
+        console.log(dir);
+        if (dir[1] != 0) {
+            var error = dir[1]
+            if (error == -1) console.log("Sensor error. Sensors have no date about this target");
+            if (error == 1) console.log("Sensor error. All 4 sensors are picking up the target signal, indeterminate direction");
+            if (error == 2) console.log("Sensor error. Front and Back sensors are picking up the target signal, likely ahead or behind");
+            if (error == 3) console.log("Sensor error. Left and Right are picking up the target, likely directly to one of the sides");
+            if (error == 4) console.log("Sensor error. Unknown condition.")
+            throw ('Sensor error ' + dir[1])
+            return;
+        } else {
+            car.pivot(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb, dir);
+            setTimeout(function() {
+                movement(targetId);
+            }, 1000);
+        }
+    }).catch(function(error) {
+        console.log(error);
+        car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
+        self.status = 'idle'
+    })
+}
+
+
 // Car movements
 function movement(targetId) {
-    // var sensors = detector.getRecentDetections(targetId);
-    // var dir = detector.getDirection(sensors);
-    // if (dir[1] != 0) {
-    //     // var error = dir[1]
-    //     // if (error == -1) console.log("Sensor error. Sensors have no date about this target");
-    //     // if (error == 1) console.log("Sensor error. All 4 sensors are picking up the target signal, indeterminate directoin");
-    //     // if (error == 2) console.log("Sensor error. Front and Back sensors are picking up the target signal, likely ahead or behind");
-    //     // if (error == 3) console.log("Sensor error. Left and Right are picking up the target, likely directly to one of the sides");
-    //     // if (error == 4) console.log("Sensor error. Unknown condition.")
-    //     car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
-    //     self.status = 'idle'
-    // }
     if (prevDistArray[2] <= 3 && prevDistArray[1] <= 3) {
         car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
         self.status = 'idle'
@@ -260,10 +281,11 @@ function runClient() {
     setTimeout(function() {
         if (registered) {
             heartbeatInterval = setInterval(heartbeat, 1000);
+            beforeMovement(self.target)
             movement(self.target);
         } else {
             self.target = 0;
-            movement(self.target);
+            beforeMovement(self.target);
         }
     }, 1000)
 }
