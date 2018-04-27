@@ -50,11 +50,6 @@ var prevDistArray = new Array(3);
 prevDistArray[0] = 9999;
 prevDistArray[1] = 999;
 prevDistArray[2] = 999;
-var arrayIndex = 0;
-
-var first = true;
-var second = false;
-var third = false;
 
 var interval = setInterval(ping, ms);
 var distance = 0;
@@ -78,25 +73,53 @@ function interruptCallback(x) {
 			
 		} else if (distance <= 3.0 && (prevDistArray[2] <= 3.0)) {
             car.stop(a1, a2, b1, b2, pa, pb);
-            //console.log("8");
-            
-            //var det = [2,1];
+            b.detachInterrupt(echo, avoidance);
         	
-        	//car.pivot(a1, a2, b1, b2, pa, pb, det);
-        	
-        	//car.forward(a1, a2, b1, b2, pa, pb);
-        	
-        	//det = [-2,1];
-        	
-        	//car.pivot(a1, a2, b1, b2, pa, pb, det);
+        	//setTimeout(car.stop, 100);
             
 		}
-			prevDistArray[0] = prevDistArray[1];
-			prevDistArray[1] = prevDistArray[2];
-			prevDistArray[2] = distance;
-			console.log("Post Shift: "+prevDistArray);
+		prevDistArray[0] = prevDistArray[1];
+		prevDistArray[1] = prevDistArray[2];
+		prevDistArray[2] = distance;
+		console.log("Post Shift: "+prevDistArray);
 	}
 }
 
-
+function avoidance(x) {
+	var det = new Array(2);
+	det[0] = 2;
+	det[1] = 0;
+	
+	var det2 = new Array(2);
+    det2[0] = -2;
+    det2[1] = 0;
+        	
+    car.stop(a1,a2,b1,b2,pa,pb);
+    setTimeout(function(){
+	    car.pivot(a1, a2, b1, b2, pa, pb, det);
+	        	
+	    setTimeout(function (){
+	    	car.stop(a1, a2, b1, b2, pa, pb);
+	    	setTimeout(function(){
+		    	car.forward(a1, a2, b1, b2, pa, pb);
+		    	setTimeout( function(){
+		    		car.stop(a1, a2, b1, b2, pa, pb);
+		    		setTimeout(function(){
+			    		car.pivot(a1, a2, b1, b2, pa, pb, det2);
+			    			setTimeout(function(){
+			    				prevDistArray[0] = 9999;
+								prevDistArray[1] = 999;
+								prevDistArray[2] = 999;
+			    				b.attachInterrupt(echo, true, b.FALLING, interruptCallback);
+			    				b.digitalWrite(trigger, 1);
+			    			}, 1000);
+		    		}, 1000);
+		    	}, 2000);
+	    	}, 500);
+	    }	, 2000);
+    }, 500);
+        	
+    
+    
+}
  
