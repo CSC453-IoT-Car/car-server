@@ -14,7 +14,9 @@ var self = {
     status: 'idle',
     type: 'car',
     networks: os.networkInterfaces(),
-    blocking: null
+    blocking: null,
+    ultrasonic: null,
+    detector: null
 }
 var heartbeatInterval = null;
 var api = 'http://zeroparticle.net:3000';
@@ -43,6 +45,8 @@ prevDistArray[0] = 9999;
 prevDistArray[1] = 999;
 prevDistArray[2] = 999;
 
+var beaconSearchTries = 0;
+
 function interruptCallback(x) {
     if (x.attached) {
         return;
@@ -53,7 +57,7 @@ function interruptCallback(x) {
         prevDistArray[0] = prevDistArray[1];
         prevDistArray[1] = prevDistArray[2];
         prevDistArray[2] = (pulseTime[1] / 1000000 - 0.8).toFixed(3);
-        console.log('prevDistArray', prevDistArray)
+        self.ultrasonic = prevDistArray[2];
     }
 }
     
@@ -124,6 +128,7 @@ function avoidance(x) {
 }
 
 function beforeMovement(targetId) {
+    console.log("At before")
     var promise = new Promise(function(resolve, reject) {
         resolve(detector.getLastReading(targetId))
     })
@@ -131,17 +136,27 @@ function beforeMovement(targetId) {
         return detector.getDirection(value);
     }).then(function(value) {
         var dir = value;
+        self.detector = dir;
         console.log(dir);
         if (dir[1] != 0) {
-            var error = dir[1]
-            if (error == -1) console.log("Sensor error. Sensors have no date about this target");
-            if (error == 1) console.log("Sensor error. All 4 sensors are picking up the target signal, indeterminate direction");
-            if (error == 2) console.log("Sensor error. Front and Back sensors are picking up the target signal, likely ahead or behind");
-            if (error == 3) console.log("Sensor error. Left and Right are picking up the target, likely directly to one of the sides");
-            if (error == 4) console.log("Sensor error. Unknown condition.")
-            throw ('Sensor error ' + dir[1])
-            return;
+            if ((dir[1] != -1 || targetSeen) && beaconSearchTries < 3) {
+                beaconSearchTries += 1;
+                self.status = 'navigating'
+                car.forward(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
+                setTimeout(function() {
+                    car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
+                    self.status = 'idle'
+                }, 500);
+                setTimeout(function() {
+                    beforeMovement(targetId);
+                }, 1000);
+                return;
+            } else {
+                throw "Couldn't find target"
+            }
         } else {
+            beaconSearchTries = 0;
+            self.status = 'navigating'
             car.pivot(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb, dir);
             setTimeout(function() {
                 movement(targetId);
@@ -150,13 +165,15 @@ function beforeMovement(targetId) {
     }).catch(function(error) {
         console.log(error);
         car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
-        self.status = 'idle'
+        self.status = 'idle';
+        self.target = -1;
     })
 }
 
 
 // Car movements
 function movement(targetId) {
+    console.log("At movement")
     if (prevDistArray[2] <= 3 && prevDistArray[1] <= 3) {
         car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
         self.status = 'idle'
@@ -179,7 +196,6 @@ function movement(targetId) {
             return;
         }
     } else {
-        // car.pivot(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb, dir);
         car.forward(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
     }
     setTimeout(function() {
@@ -188,7 +204,8 @@ function movement(targetId) {
 }
 
 function heartbeat() {
-    console.log('Sending heartbeat.');
+    console.log("At heartbeat")
+    console.log("self", self)
     request({
         url: api + '/heartbeat',
         method: "POST",
@@ -202,12 +219,14 @@ function heartbeat() {
             console.log("Error sending heartbeat to backend.");
         } else {
             if (body) {
-                if (body.targetId) {
-                    var old = self.target;
-                    self.target = body.targetId;
-                    if (self.target != old) {
+                if (self.target == null) self.target = '-1';
+                if (body.targetId && body.targetId != '-1') {
+                    if (self.target != body.targetId) {
+                        self.target = body.targetId;
+                        console.log('At first move');
                         beforeMovement(self.target);
                     }
+                    self.target = body.targetId;
                 } else {
                     self.status = 'idle';
                     car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
@@ -238,8 +257,8 @@ function registerClient() {
         } else if (!res || res.statusCode != 200) {
             console.log("Error registering with backend." + res);
         } else {
+            console.log("At register")
             registered = true;
-            console.log('registered', registered)
             self.sessionKey = body.sessionKey;
             var updatedConf = {
                 id: self.id,
@@ -258,7 +277,6 @@ function getOtherObjects() {
         method: "GET"
     }, function (err, res, body) {
         if (res && res.statusCode == 200) {
-            console.log('other objects: ', body);
             for (var item in body) {
                 if (item.type == "car" && item.id != self.id) {
                     otherCars.push(item.id);
