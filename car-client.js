@@ -235,6 +235,8 @@ function movement(targetId) {
             //beforeMovement(targetId);
             movement(targetId);
         }, 100);//3000
+    } else {
+        car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
     }
 }
 
@@ -253,18 +255,22 @@ function heartbeat() {
             console.log("Error sending heartbeat to backend.");
         } else {
             if (body) {
-                if (body.targetId) {
+                if (body.targetId !== undefined && body.targetId != '-1') {
+                    if(detector.getRecentDetections(body.targetId, Date.now() - 3000).length == 0){return;}
                     var old = self.target;
                     self.target = body.targetId;
                     console.log("Target set to "+self.target);
                     self.status = 'navigating';
                     movement(self.target); 
+                    
+                    
+                    
                     /*
                     if (self.target != old) {
                         movement(self.target); //was beforeMovement
                     }
                     */
-                } else if (body.targetId && body.targetId == '-1') {
+                } else if (body.targetId !== undefined && body.targetId == '-1') {
                     self.status = 'idle';
                     self.target = body.targetId;
                     console.log("Status set to idle in heartbeat");
