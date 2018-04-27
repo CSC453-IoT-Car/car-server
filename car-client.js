@@ -224,10 +224,6 @@ function heartbeat() {
                     if (self.target != old) {
                         beforeMovement(self.target);
                     }
-                } else if (body.targetId && body.targetId == '-1') {
-                    self.status = 'idle';
-                    self.target = body.targetId;
-                    car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
                 }
                 if (body.blocking) {
                     self.status = 'navigating'
