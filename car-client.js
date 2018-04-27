@@ -142,7 +142,8 @@ function movement(targetId) {
         var carBlockage = false;
         for (var otherCarId in otherCars) {
             carBlockage = true;
-            if (detector.getDirection(detector.getRecentDetections(otherCarId))[0] == 0) {
+            var dir = detector.getDirection(detector.getRecentDetections(otherCarId));
+            if (dir[0] == NaN && (dir[1] == 1 || dir[1] == 2)) {
                 self.blocking = true;
                 if (registered) {
                     notifyBlocked(self.id, otherCarId);
