@@ -37,7 +37,12 @@ var pins = {
 }
 var startTime, pulseTime;
 var ms = 250;
-var usDistance = 0;
+
+var prevDistArray = new Array(3);
+prevDistArray[0] = 9999;
+prevDistArray[1] = 999;
+prevDistArray[2] = 999;
+var arrayIndex = 0;
 
 function toolsSetup() {
     //Car
@@ -75,16 +80,9 @@ function toolsSetup() {
         if (startTime) {
             pulseTime = process.hrtime(startTime);
             b.digitalWrite(pins.trigger, 1);
-            usDistance =  (pulseTime[1] / 1000000 - 0.8).toFixed(3);
-            if (distance > 3.0 && (prevDistArray[2] > 3.0)) {
-                car.forward(a1, a2, b1, b2, pa, pb);
-		    } else if (distance <= 3.0 && (prevDistArray[2] <= 3.0)) {
-                car.stop(a1, a2, b1, b2, pa, pb);
-		    }
 		    prevDistArray[0] = prevDistArray[1];
 		    prevDistArray[1] = prevDistArray[2];
-		    prevDistArray[2] = distance;
-		    console.log("Post Shift: "+prevDistArray);
+		    prevDistArray[2] = (pulseTime[1] / 1000000 - 0.8).toFixed(3);
         }
     }
 
@@ -94,7 +92,7 @@ function toolsSetup() {
 function movement(targetId) {
     var sensors = detector.getRecentDetections(targetId);
     var dir = detector.getDirection(sensors);
-    if (dir[0] == NaN) {
+    if (dir[1] != 0) {
         var error = dir[1]
         if (error == -1) console.log("Sensor error. Sensors have no date about this target");
         if (error == 1) console.log("Sensor error. All 4 sensors are picking up the target signal, indeterminate directoin");
@@ -102,55 +100,31 @@ function movement(targetId) {
         if (error == 3) console.log("Sensor error. Left and Right are picking up the target, likely directly to one of the sides");
         if (error == 4) console.log("Sensor error. Unknown condition.")
         self.status = 'idle'
-        return;
     }
-    if (usDistance < 3.25) {
+    if (prevDistArray[2] <= 3 && prevDistArray[1] <= 3) {
+        car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
         self.status = 'idle'
-        for (var item in otherCars) {
-            if (detector.getDirection(detector.getRecentDetections(item))[0] == 0) {
+        var carBlockage = false;
+        for (var otherCarId in otherCars) {
+            carBlockage = true;
+            if (detector.getDirection(detector.getRecentDetections(otherCarId))[0] == 0) {
                 self.blocking = true;
-
+                if (registered) {
+                    notifyBlocked(self.id, otherCarId);
+                } else {
+                    carBlockage = false;
+                }
+                break;
             }
         }
-    }
-}
-
-function movement(targetId) {
-    if (targetId == null) {
-        self.status = 'navigating';
-        car.forward();
-        self.status = 'idle';
-        car.stop();
-        self.blocking = null;
+        if (!carBlockage) {
+            // code for obstacle resolution
+        }
     } else {
-        while (beacon.sees(targetId)) {
-            if (!beaconSeenBefore) beaconSeenBefore = true;
-            self.status = 'navigating';
-            car.forward();
-        }
-        self.status = 'idle'
-        car.stop();
-        if (beaconSeenBefore) {
-            self.blockedById = beacon.blockedById() ? beacon.obstacleId() : null;
-            request({
-                url: api + "/notify/blocked",
-                method: "POST",
-                json: self
-            }, function(err, res, body) {
-                if (!res || res.statusCode != 200) {
-                    console.log("Error sending blockage to backend.");
-                } else {
-                    if (body) {
-                        if (body.action == 'resolve-loval') {
-                            obstacleObject();
-                        } else {
-                            obstacleCar();
-                        }
-                    }
-                }
-            })
-        }
+        car.pivot(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb, dir);
+        car.forward(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
     }
+    movement(targetId);
 }
 
 function heartbeat() {
@@ -170,12 +144,17 @@ function heartbeat() {
             if (body) {
                 if (body.targetId) {
                     self.target = body.targetId;
-                    if (currentTarget != body.targetId) {
-                        currentTarget = body.targetId;
-                        movement(currentTarget);
-                    }
                 } else {
-                    console.log('Idle car without target')
+                    self.status = 'idle';
+                    car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
+                }
+                if (body.blocking) {
+                    self.status = 'navigating'
+                    car.forward(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
+                    setTimeout(function() {
+                        car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
+                        self.status = 'idle'
+                    }, 3000)
                 }
             }
         }
@@ -221,23 +200,26 @@ function getOtherObjects() {
     })
 }
 
-function notifyBlocked() {
+function notifyBlocked(id, blockindId) {
+    var body = {
+        id : id,
+        blockindId : blockindId
+    };
     request({
         url: api + "/notify/blocked",
-        method: "PUSH",
-        
+        method: "POST",
+        json: body
+    }, function (err, res, body) {
+
     })
 }
 
 function runClient() {
     registerClient();
     getOtherObjects();
-    
     toolsSetup();
-    if (registered) {
-        heartbeatInterval = setInterval(heartbeat, 1000);
-    }
-
+    heartbeatInterval = setInterval(heartbeat, 1000);
+    movement(registered ? self.target : 10);
 }
 
 runClient();
