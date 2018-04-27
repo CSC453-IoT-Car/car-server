@@ -14,7 +14,9 @@ var self = {
     status: 'idle',
     type: 'car',
     networks: os.networkInterfaces(),
-    blocking: null
+    blocking: null,
+    ultrasonic: null,
+    detector: null
 }
 var heartbeatInterval = null;
 var api = 'http://zeroparticle.net:3000';
@@ -43,6 +45,8 @@ prevDistArray[0] = 9999;
 prevDistArray[1] = 999;
 prevDistArray[2] = 999;
 
+var beaconSearchTries = 0;
+
 function interruptCallback(x) {
     if (x.attached) {
         return;
@@ -53,7 +57,7 @@ function interruptCallback(x) {
         prevDistArray[0] = prevDistArray[1];
         prevDistArray[1] = prevDistArray[2];
         prevDistArray[2] = (pulseTime[1] / 1000000 - 0.8).toFixed(3);
-        console.log('prevDistArray', prevDistArray)
+        self.ultrasonic = prevDistArray[2];
     }
 }
     
@@ -124,6 +128,7 @@ function avoidance(x) {
 }
 
 function beforeMovement(targetId) {
+    console.log("At before")
     var promise = new Promise(function(resolve, reject) {
         resolve(detector.getLastReading(targetId))
     })
@@ -131,9 +136,11 @@ function beforeMovement(targetId) {
         return detector.getDirection(value);
     }).then(function(value) {
         var dir = value;
+        self.detector = dir;
         console.log(dir);
         if (dir[1] != 0) {
-            if (dir[1] != -1 || targetSeen) {
+            if ((dir[1] != -1 || targetSeen) && beaconSearchTries < 3) {
+                beaconSearchTries += 1;
                 self.status = 'navigating'
                 car.forward(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
                 setTimeout(function() {
@@ -148,6 +155,7 @@ function beforeMovement(targetId) {
                 throw "Couldn't find target"
             }
         } else {
+            beaconSearchTries = 0;
             self.status = 'navigating'
             car.pivot(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb, dir);
             setTimeout(function() {
@@ -157,7 +165,7 @@ function beforeMovement(targetId) {
     }).catch(function(error) {
         console.log(error);
         car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
-        self.status = 'idle'
+        self.status = 'idle';
         self.target = -1;
     })
 }
@@ -165,6 +173,7 @@ function beforeMovement(targetId) {
 
 // Car movements
 function movement(targetId) {
+    console.log("At movement")
     if (prevDistArray[2] <= 3 && prevDistArray[1] <= 3) {
         car.stop(pins.a1, pins.a2, pins.b1, pins.b2, pins.pa, pins.pb);
         self.status = 'idle'
@@ -195,7 +204,8 @@ function movement(targetId) {
 }
 
 function heartbeat() {
-    console.log('Sending heartbeat.');
+    console.log("At heartbeat")
+    console.log("self", self)
     request({
         url: api + '/heartbeat',
         method: "POST",
@@ -213,7 +223,7 @@ function heartbeat() {
                 if (body.targetId && body.targetId != '-1') {
                     if (self.target != body.targetId) {
                         self.target = body.targetId;
-                        console.log('first move');
+                        console.log('At first move');
                         beforeMovement(self.target);
                     }
                     self.target = body.targetId;
@@ -246,6 +256,7 @@ function registerClient() {
         } else if (!res || res.statusCode != 200) {
             console.log("Error registering with backend.");
         } else {
+            console.log("At register")
             registered = true;
             self.sessionKey = body.sessionKey;
             var updatedConf = {
