@@ -266,6 +266,13 @@ function registerClient() {
             }
             fs.writeFileSync('config.json', JSON.stringify(updatedConf));
         }
+        console.log('registered', registered);
+        if (registered) {
+            heartbeatInterval = setInterval(heartbeat, 1000);
+        } else {
+            self.target = -1;
+            beforeMovement(self.target);
+        }
     });
     
     return success;
@@ -304,6 +311,7 @@ function runClient() {
     registerClient();
     getOtherObjects();
     toolsSetup();
+    /*moving to register callback
     setTimeout(function() {
         console.log('registered', registered);
         if (registered) {
@@ -313,6 +321,7 @@ function runClient() {
             beforeMovement(self.target);
         }
     }, 1000)
+    */
 }
 
 runClient();
