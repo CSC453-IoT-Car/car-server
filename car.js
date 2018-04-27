@@ -64,11 +64,11 @@ module.exports = {
    * */
   pivot: function(a1, a2, b1, b2, pa, pb, det) {
     if (det[1] != 0) {
-      this.stop(a1, a2, b1, b2, pa, pb);
+      module.exports.stop(a1, a2, b1, b2, pa, pb);
       return 'idle'
     } 
     if (det[0] == 0) {
-      this.forward(a1, a2, b1, b2, pa, pb);
+      module.exports.forward(a1, a2, b1, b2, pa, pb);
       return 'navigating'
     } else if (det[0] == 1) {
       b.digitalWrite(a1, b.HIGH);
@@ -79,7 +79,7 @@ module.exports = {
       b.digitalWrite(b2, b.HIGH);
       b.analogWrite(pb, .5);
       setTimeout(function() {
-        this.stop(a1, a2, b1, b2, pa, pb);
+        module.exports.stop(a1, a2, b1, b2, pa, pb);
       }, 250);
     } else if (det[0] == 2){
       b.digitalWrite(a1, b.HIGH);
@@ -90,7 +90,7 @@ module.exports = {
       b.digitalWrite(b2, b.HIGH);
       b.analogWrite(pb, .5);
       setTimeout(function() {
-        this.stop(a1, a2, b1, b2, pa, pb);
+        module.exports.stop(a1, a2, b1, b2, pa, pb);
       }, 400);
     } else if (det[0] == 3){
       b.digitalWrite(a1, b.HIGH);
@@ -101,7 +101,7 @@ module.exports = {
       b.digitalWrite(b2, b.HIGH);
       b.analogWrite(pb, .5);
       setTimeout(function() {
-        this.stop(a1, a2, b1, b2, pa, pb);
+        module.exports.stop(a1, a2, b1, b2, pa, pb);
       }, 500);
     } else if (det[0] == 4){
       b.digitalWrite(a1, b.HIGH);
@@ -112,7 +112,7 @@ module.exports = {
       b.digitalWrite(b2, b.HIGH);
       b.analogWrite(pb, .5);
       setTimeout(function() {
-        this.stop(a1, a2, b1, b2, pa, pb);
+        module.exports.stop(a1, a2, b1, b2, pa, pb);
       }, 625);
     } else if (det[0] == -1){
       b.digitalWrite(a1, b.LOW);
@@ -123,7 +123,7 @@ module.exports = {
       b.digitalWrite(b2, b.LOW);
       b.analogWrite(pb, 1);
       setTimeout(function() {
-        this.stop(a1, a2, b1, b2, pa, pb);
+        module.exports.stop(a1, a2, b1, b2, pa, pb);
       }, 250);
     } else if (det[0] == -2){
       b.digitalWrite(a1, b.LOW);
@@ -134,7 +134,7 @@ module.exports = {
       b.digitalWrite(b2, b.LOW);
       b.analogWrite(pb, 1);
       setTimeout(function() {
-        this.stop(a1, a2, b1, b2, pa, pb);
+        module.exports.stop(a1, a2, b1, b2, pa, pb);
       }, 400);
     } else if (det[0] == -3){
       b.digitalWrite(a1, b.LOW);
@@ -145,7 +145,7 @@ module.exports = {
       b.digitalWrite(b2, b.LOW);
       b.analogWrite(pb, 1);
       setTimeout(function() {
-        this.stop(a1, a2, b1, b2, pa, pb);
+        module.exports.stop(a1, a2, b1, b2, pa, pb);
       }, 640);
     }
   
