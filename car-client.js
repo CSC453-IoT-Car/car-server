@@ -54,7 +54,6 @@ function interruptCallback(x) {
         prevDistArray[0] = prevDistArray[1];
         prevDistArray[1] = prevDistArray[2];
         prevDistArray[2] = (pulseTime[1] / 1000000 - 0.8).toFixed(3);
-        console.log("Previous Dist Array: " + prevDistArray)
     }
 }
     
@@ -117,6 +116,7 @@ function avoidance(x) {
                                 b.attachInterrupt(pins.echo, true, b.FALLING, interruptCallback);
                                 b.digitalWrite(pins.trigger, 1);
                                 // beforeMovement(self.target);
+                                self.status = 'navigating';
                                 movement(self.target);
                             }, 1000);
                     }, 1000);
@@ -223,6 +223,7 @@ function movement(targetId) {
             return;
         }
         else {
+            console.log("No cars detected - going around")
             b.detachInterrupt(pins.echo, avoidance);
             return;
         }
